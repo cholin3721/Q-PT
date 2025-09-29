@@ -3,46 +3,46 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 
-// React의 Card 컴포넌트 역할
-// lib/widgets/app_card.dart
-
 class AppCard extends StatelessWidget {
   final Widget? header;
   final Widget? content;
   final Widget? footer;
-  // 1. 카드 내용물의 가로 정렬을 위한 변수 추가
   final CrossAxisAlignment contentAlignment;
+  final EdgeInsetsGeometry? margin; // 1. margin 속성 추가
 
   const AppCard({
     super.key,
     this.header,
     this.content,
     this.footer,
-    // 2. 기본값은 왼쪽 정렬(start), 필요시 외부에서 변경 가능
     this.contentAlignment = CrossAxisAlignment.start,
+    this.margin, // 2. 생성자에 추가
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.outlineBorder),
-        borderRadius: BorderRadius.circular(12.0),
-      ),
-      child: Column(
-        // 3. 고정되었던 start 대신, 외부에서 받은 contentAlignment 값을 사용
-        crossAxisAlignment: contentAlignment,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (header != null) header!,
-          if (content != null) content!,
-          if (footer != null) footer!,
-        ],
+    // 3. Container를 Padding으로 감싸서 margin 효과를 줍니다.
+    return Padding(
+      padding: margin ?? EdgeInsets.zero,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: AppColors.outlineBorder),
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+        child: Column(
+          crossAxisAlignment: contentAlignment,
+          children: [
+            if (header != null) header!,
+            if (content != null) content!,
+            if (footer != null) footer!,
+          ],
+        ),
       ),
     );
   }
 }
+
 
 class AppCardHeader extends StatelessWidget {
   final Widget title;

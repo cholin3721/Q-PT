@@ -64,6 +64,20 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
     _pageController.animateToPage(2, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
   }
 
+  // 시스템 뒤로가기 버튼 처리를 위한 함수
+  Future<bool> _onWillPop() async {
+    // 현재 페이지가 첫 페이지가 아니라면
+    if (_pageController.page?.round() != 0) {
+      // 이전 페이지로 이동
+      _goToPreviousStep();
+      // 앱이 종료되는 것을 막음
+      return false;
+    }
+    // 첫 페이지라면 시스템 기본 동작(화면 닫기)을 따름
+    return true;
+  }
+
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -73,15 +87,19 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(),
-        children: [
-          _buildUploadStep(),
-          _buildReviewStep(),
-          _buildGoalsStep(),
-        ],
+    // WillPopScope로 Scaffold를 감싸서 시스템 뒤로가기 제어
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        body: PageView(
+          controller: _pageController,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _buildUploadStep(),
+            _buildReviewStep(),
+            _buildGoalsStep(),
+          ],
+        ),
       ),
     );
   }
@@ -111,10 +129,6 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
     );
   }
 
-  // lib/screens/inbody_setup_screen.dart
-
-  // lib/screens/inbody_setup_screen.dart
-
   Widget _buildUploadStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 48),
@@ -134,9 +148,7 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
               height: 250,
               child: Center(child: CircularProgressIndicator()))
               : Column(
-            // 이제 이 Column은 crossAxisAlignment가 필요 없습니다.
             children: [
-              // DottedBorder와 그 내용물을 Center 안에서 직접 구성
               DottedBorder(
                 options: RoundedRectDottedBorderOptions(
                   radius: const Radius.circular(12),
@@ -144,7 +156,6 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
                   strokeWidth: 1,
                   dashPattern: const [6, 6],
                 ),
-                // DottedBorder의 자식으로 Center를 사용해 내부 정렬
                 child: Center(
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
@@ -165,7 +176,6 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // 버튼도 너비를 직접 제어할 수 있도록 SizedBox로 감쌉니다.
               SizedBox(
                 width: 200, // 예시 너비
                 child: AppButton(

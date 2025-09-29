@@ -1,9 +1,8 @@
-// lib/main.dart
+// lib/main.dart (최종 롤백 버전)
 
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-// 우리가 만든 모든 화면들을 가져옵니다.
 import 'screens/welcome_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/dashboard_screen.dart';
@@ -20,7 +19,6 @@ void main() async {
   runApp(const MyApp());
 }
 
-// 앱의 전체 상태(환영->인증->메인)를 관리하기 위해 StatefulWidget으로 변경
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -28,60 +26,38 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-// 앱의 상태를 정의하는 enum
 enum AppState { welcome, authentication, authenticated }
 
 class _MyAppState extends State<MyApp> {
   AppState _appState = AppState.welcome;
   Map<String, dynamic>? _user;
 
-  void _handleGetStarted() {
-    setState(() {
-      _appState = AppState.authentication;
-    });
-  }
-
-  // 1. 환영 화면으로 돌아가는 함수 추가
-  void _handleBackToWelcome() {
-    setState(() {
-      _appState = AppState.welcome;
-    });
-  }
-
+  void _handleGetStarted() => setState(() => _appState = AppState.authentication);
   void _handleAuthSuccess(Map<String, dynamic> userData) {
     setState(() {
       _user = userData;
       _appState = AppState.authenticated;
     });
   }
-
-  void _handleLogout() {
-    setState(() {
-      _user = null;
-      _appState = AppState.welcome;
-    });
-  }
+  void _handleLogout() => setState(() {
+    _user = null;
+    _appState = AppState.welcome;
+  });
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Q-PT App',
-      theme: AppTheme.lightTheme, // 앱 전체에 우리가 만든 테마를 적용!
-      
+      theme: AppTheme.lightTheme,
       home: Builder(
         builder: (context) {
           switch (_appState) {
             case AppState.welcome:
               return WelcomeScreen(onGetStarted: _handleGetStarted);
             case AppState.authentication:
-              // 수정된 AuthScreen은 이제 데이터를 받는 함수를 정상적으로 전달받습니다.
-              return AuthScreen(
-                onAuthSuccess: _handleAuthSuccess,
-                onBack: _handleBackToWelcome,
-              );
+              return AuthScreen(onAuthSuccess: _handleAuthSuccess, onBack: () => setState(() => _appState = AppState.welcome));
             case AppState.authenticated:
-              // MainAppShell에 user 데이터와 logout 함수를 전달합니다.
               return MainAppShell(user: _user!, onLogout: _handleLogout);
           }
         },
@@ -92,11 +68,9 @@ class _MyAppState extends State<MyApp> {
 
 // 인증 후의 메인 앱 구조 (하단 네비게이션 바 포함)
 class MainAppShell extends StatefulWidget {
-  // 1. user와 onLogout을 전달받을 변수를 선언합니다.
   final Map<String, dynamic> user;
   final VoidCallback onLogout;
 
-  // 2. 생성자에서 이 값들을 필수로 받도록 수정합니다.
   const MainAppShell({
     super.key,
     required this.user,
@@ -116,21 +90,20 @@ class _MainAppShellState extends State<MainAppShell> {
   @override
   void initState() {
     super.initState();
-    // 3. 이제 widget.user 와 widget.onLogout 으로 올바르게 접근할 수 있습니다.
     _widgetOptions = <Widget>[
       DashboardScreen(user: widget.user),
       DietTrackerScreen(user: widget.user),
       InBodySetupScreen(user: widget.user, onComplete: _handleInBodyComplete),
       WorkoutPlannerScreen(user: widget.user),
       AiTrainerScreen(user: widget.user),
-      ProfileScreen(user: widget.user, onLogout: widget.onLogout),
+      ProfileScreen(user: widget.user, onLogout: widget.onLogout, onInBodyComplete: _handleInBodyComplete),
     ];
   }
 
   void _onItemTapped(int index) {
     setState(() { _selectedIndex = index; });
   }
-  
+
   void _handleInBodyComplete() {
     setState(() {
       _hasCompletedInBody = true;
@@ -140,10 +113,11 @@ class _MainAppShellState extends State<MainAppShell> {
 
   @override
   Widget build(BuildContext context) {
+    // 인바디 설정을 완료하지 않았고, 현재 보려는 탭이 인바디 탭이 아니라면, 인바디 설정 화면을 강제로 먼저 보여줌
     if (!_hasCompletedInBody && _selectedIndex != 2) {
       return InBodySetupScreen(user: widget.user, onComplete: _handleInBodyComplete);
     }
-    
+
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,

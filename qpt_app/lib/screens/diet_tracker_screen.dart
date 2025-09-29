@@ -1,5 +1,6 @@
 // lib/screens/diet_tracker_screen.dart (수정본)
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/meal_data.dart';
@@ -7,6 +8,8 @@ import '../widgets/app_card.dart';
 import '../widgets/app_progress_indicator.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_badge.dart';
+import '../widgets/app_camera_modal.dart';
+import '../widgets/manual_food_entry.dart';
 
 class DietTrackerScreen extends StatefulWidget {
   // 1. user 데이터를 전달받을 변수 선언
@@ -29,11 +32,46 @@ class _DietTrackerScreenState extends State<DietTrackerScreen> {
     Meal(id: 3, name: "Dinner", time: "19:45", foods: [Food(name: "Salmon Fillet", calories: 280, protein: 39), Food(name: "Steamed Vegetables", calories: 80, protein: 4), Food(name: "Sweet Potato", calories: 245, protein: 2)], totalCalories: 605, image: "placeholder"),
   ];
 
-  void _handlePhotoAnalysis() async {
-    setState(() => _isAnalyzing = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => _isAnalyzing = false);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("AI analysis would complete here.")));
+ void _handlePhotoAnalysis() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // 내용이 길어져도 스크롤 가능하게
+      backgroundColor: Colors.transparent, // 모달 배경을 투명하게
+      builder: (context) {
+        return AppCameraModal(
+          onImageSelected: (File image) async {
+            // 이미지가 최종 선택되면 AI 분석 시작
+            print('Selected image path: ${image.path}');
+            setState(() => _isAnalyzing = true);
+            await Future.delayed(const Duration(seconds: 2));
+            setState(() => _isAnalyzing = false);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("AI analysis would complete here.")),
+              );
+            }
+          },
+        );
+      },
+    );
+  }
+
+   void _handleAddMealManually() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // 모달이 화면의 대부분을 차지할 수 있도록 함
+      builder: (context) => DraggableScrollableSheet( // 모달을 드래그해서 닫을 수 있게 함
+        expand: false,
+        initialChildSize: 0.9, // 초기 높이를 화면의 90%로 설정
+        builder: (_, controller) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: const ManualFoodEntry(),
+        ),
+      ),
+    );
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -142,7 +180,8 @@ class _DietTrackerScreenState extends State<DietTrackerScreen> {
           child: SizedBox(
             height: 80,
             child: AppButton(
-              onPressed: _isAnalyzing ? null : _handlePhotoAnalysis,
+              // 1. 'Photo Analysis' 버튼에 _handlePhotoAnalysis 함수를 연결합니다.
+              onPressed: _handlePhotoAnalysis,
               child: _isAnalyzing
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.camera_alt), Text('Photo Analysis')]),
@@ -154,7 +193,8 @@ class _DietTrackerScreenState extends State<DietTrackerScreen> {
           child: SizedBox(
             height: 80,
             child: AppButton(
-              onPressed: () {},
+              // 2. 'Add Manually' 버튼에 _handleAddMealManually 함수를 연결합니다.
+              onPressed: _handleAddMealManually,
               variant: AppButtonVariant.outline,
               child: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.add), Text('Add Manually')]),
             ),
