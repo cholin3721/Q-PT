@@ -1,4 +1,4 @@
-// lib/widgets/exercise_registration_form.dart
+// lib/widgets/exercise_registration_form.dart (Translated Version)
 
 import 'package:flutter/material.dart';
 import 'app_select.dart';
@@ -7,25 +7,38 @@ import 'app_card.dart';
 import 'app_button.dart';
 import 'app_label.dart';
 import 'app_checkbox.dart';
+import '../services/api_service.dart';
 
 class ExerciseRegistrationForm extends StatefulWidget {
-  const ExerciseRegistrationForm({super.key});
+  final VoidCallback? onExerciseAdded;
+  
+  const ExerciseRegistrationForm({super.key, this.onExerciseAdded});
 
   @override
   State<ExerciseRegistrationForm> createState() => _ExerciseRegistrationFormState();
 }
 
 class _ExerciseRegistrationFormState extends State<ExerciseRegistrationForm> {
-  // --- 상태 변수 ---
+  final ApiService _apiService = ApiService();
+  
+  // --- State Variables ---
   final _exerciseNameController = TextEditingController();
   String? _exerciseType;
   final List<String> _selectedMuscleGroups = [];
+  bool _isSubmitting = false;
 
-  // --- Mock 데이터 ---
+  // --- Mock Data ---
   final Map<String, String> _muscleGroups = {
-    '1': '가슴', '2': '등', '3': '어깨', '4': '팔',
-    '5': '복근', '6': '하체', '7': '전신', '8': '유산소'
+    '1': 'Chest', '2': 'Back', '3': 'Shoulders', '4': 'Arms',
+    '5': 'Abs', '6': 'Legs', '7': 'Full Body', '8': 'Cardio'
   };
+
+  @override
+  void initState() {
+    super.initState();
+    // Add listener to rebuild on text change for button validation
+    _exerciseNameController.addListener(() => setState(() {}));
+  }
 
   void _handleMuscleGroupToggle(String groupId) {
     setState(() {
@@ -38,9 +51,41 @@ class _ExerciseRegistrationFormState extends State<ExerciseRegistrationForm> {
   }
 
   bool _isFormValid() {
-    return _exerciseNameController.text.isNotEmpty &&
+    return _exerciseNameController.text.trim().isNotEmpty &&
         _exerciseType != null &&
         _selectedMuscleGroups.isNotEmpty;
+  }
+
+  Future<void> _handleRegister() async {
+    if (!_isFormValid() || _isSubmitting) return;
+    
+    setState(() => _isSubmitting = true);
+    
+    try {
+      // API 호출
+      await _apiService.addExercise({
+        'exerciseName': _exerciseNameController.text.trim(),
+        'exerciseType': _exerciseType == 'Weight Training' ? 'weight' : 'cardio',
+        'muscleGroupIds': _selectedMuscleGroups.map((id) => int.parse(id)).toList(),
+      });
+      
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ 운동이 등록되었습니다!')),
+        );
+        
+        // 부모 위젯에 알림
+        widget.onExerciseAdded?.call();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ 운동 등록 실패: ${e.toString()}')),
+        );
+        setState(() => _isSubmitting = false);
+      }
+    }
   }
 
   @override
@@ -52,40 +97,45 @@ class _ExerciseRegistrationFormState extends State<ExerciseRegistrationForm> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+      // To prevent keyboard overlap issue
+      padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 24, right: 24, top: 24
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 헤더
+          // Header
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            const Text('새 운동 등록', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text('Register New Exercise', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(context).pop()),
           ]),
           const SizedBox(height: 24),
 
-          // 운동 이름
-          const AppLabel('운동 이름 *'),
+          // Exercise Name
+          const AppLabel('Exercise Name *'),
           const SizedBox(height: 8),
-          AppInput(controller: _exerciseNameController, hintText: '예: 벤치프레스, 데드리프트'),
+          AppInput(controller: _exerciseNameController, hintText: 'e.g., Bench Press, Deadlift'),
           const SizedBox(height: 16),
 
-          // 운동 종류
-          const AppLabel('운동 종류 *'),
+          // Exercise Type
+          const AppLabel('Exercise Type *'),
           const SizedBox(height: 8),
           AppSelect(
-            hintText: '운동 종류를 선택하세요',
-            items: const ['웨이트 트레이닝', '유산소 운동'],
+            hintText: 'Select an exercise type',
+            items: const ['Weight Training', 'Cardio'],
             value: _exerciseType,
             onChanged: (value) => setState(() => _exerciseType = value),
           ),
           const SizedBox(height: 16),
 
-          // 운동 부위
-          const AppLabel('운동 부위 * (중복 선택 가능)'),
+          // Muscle Groups
+          const AppLabel('Muscle Groups * (multiple selections possible)'),
           const SizedBox(height: 8),
           AppCard(
             content: AppCardContent(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
               child: GridView.count(
                 crossAxisCount: 2,
                 shrinkWrap: true,
@@ -106,21 +156,38 @@ class _ExerciseRegistrationFormState extends State<ExerciseRegistrationForm> {
             ),
           ),
           const SizedBox(height: 16),
-          
-          // 선택된 운동 부위 요약
+
+          // Selected Muscle Groups Summary
           if (_selectedMuscleGroups.isNotEmpty)
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
-              child: Text('선택된 부위: ${_selectedMuscleGroups.map((id) => _muscleGroups[id]).join(', ')}'),
+              child: Text('Selected groups: ${_selectedMuscleGroups.map((id) => _muscleGroups[id]).join(', ')}'),
             ),
 
           const SizedBox(height: 24),
-          // 저장/취소 버튼
+          // Save/Cancel Buttons
           Row(children: [
-            Expanded(child: AppButton(onPressed: () => Navigator.of(context).pop(), variant: AppButtonVariant.outline, child: const Text('취소'))),
+            Expanded(
+              child: AppButton(
+                onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+                variant: AppButtonVariant.outline,
+                child: const Text('Cancel'),
+              ),
+            ),
             const SizedBox(width: 8),
-            Expanded(child: AppButton(onPressed: _isFormValid() ? () {} : null, child: const Text('등록하기'))),
+            Expanded(
+              child: AppButton(
+                onPressed: _isFormValid() && !_isSubmitting ? _handleRegister : null,
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Register'),
+              ),
+            ),
           ]),
         ],
       ),

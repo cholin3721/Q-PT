@@ -2,17 +2,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/feedback_data.dart';
-import '../theme/colors.dart';
+import 'package:table_calendar/table_calendar.dart';
 import '../widgets/app_badge.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_card.dart';
+import '../services/api_service.dart';
 
 class AiTrainerScreen extends StatefulWidget {
-  // 1. user 데이터를 전달받을 변수 선언
   final Map<String, dynamic> user;
 
-  // 2. 생성자에서 user 데이터를 필수로 받도록 수정
   const AiTrainerScreen({super.key, required this.user});
 
   @override
@@ -20,42 +18,74 @@ class AiTrainerScreen extends StatefulWidget {
 }
 
 class _AiTrainerScreenState extends State<AiTrainerScreen> {
-  // --- 상태 변수 ---
+  final ApiService _apiService = ApiService();
+  
   bool _isGeneratingFeedback = false;
+  bool _isLoading = true;
   String _selectedPeriod = "week";
+  
+  Map<String, dynamic>? _latestFeedback;
+  List<Map<String, dynamic>> _feedbackHistory = [];
 
-  // --- Mock 데이터 ---
-  final List<FeedbackHistory> _feedbackHistory = [
-    FeedbackHistory(
-      id: 1, type: "weekly", date: DateTime(2024, 1, 15),
-      analysis: "Excellent progress this week! Your consistency with workouts has improved significantly.",
-      recommendations: [
-        "Increase protein intake by 15g daily", "Add 5kg to your bench press", "Add one cardio session"
-      ],
-      metrics: FeedbackMetrics(workoutConsistency: 85, nutritionScore: 78, progressRate: 92),
-    ),
-    FeedbackHistory(
-      id: 2, type: "monthly", date: DateTime(2024, 1, 1),
-      analysis: "Your December performance shows strong dedication.",
-      recommendations: ["Transition to intermediate workout routine", "Focus on compound movements", "Track sleep quality"],
-      metrics: FeedbackMetrics(workoutConsistency: 82, nutritionScore: 74, progressRate: 88),
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadFeedbacks();
+  }
 
-  void _handleGenerateFeedback() async {
+  Future<void> _loadFeedbacks() async {
+    try {
+      final feedbacks = await _apiService.getAIFeedbacks();
+      if (mounted) {
+        setState(() {
+          _feedbackHistory = feedbacks;
+          _latestFeedback = feedbacks.isNotEmpty ? feedbacks.first : null;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        print('피드백 로드 실패: $e');
+      }
+    }
+  }
+
+  Future<void> _handleGenerateFeedback() async {
     setState(() => _isGeneratingFeedback = true);
-    await Future.delayed(const Duration(seconds: 3)); // Mock AI 분석 시간
-    setState(() => _isGeneratingFeedback = false);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("New AI feedback would be generated here!")),
-      );
+    
+    try {
+      final response = await _apiService.requestAIFeedback(_selectedPeriod);
+      
+      if (mounted) {
+        setState(() {
+          _isGeneratingFeedback = false;
+          _latestFeedback = response;
+          _feedbackHistory.insert(0, response);
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('AI 분석이 완료되었습니다!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isGeneratingFeedback = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('AI 분석 실패: ${e.toString()}')),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final latestFeedback = _feedbackHistory[0];
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.grey,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -64,11 +94,13 @@ class _AiTrainerScreenState extends State<AiTrainerScreen> {
         children: [
           _buildHeader(),
           const SizedBox(height: 24),
-          _buildQuickStats(),
-          const SizedBox(height: 24),
+          if (_latestFeedback != null) _buildRecommendedNutrition(),
+          if (_latestFeedback != null) const SizedBox(height: 24),
           _buildGenerateAnalysisCard(),
           const SizedBox(height: 24),
-          _buildLatestFeedbackCard(latestFeedback),
+          if (_latestFeedback != null) _buildLatestFeedbackCard(),
+          if (_latestFeedback != null) const SizedBox(height: 24),
+          if (_latestFeedback != null) _buildRecommendedExercises(),
         ],
       ),
     );
@@ -88,33 +120,59 @@ class _AiTrainerScreenState extends State<AiTrainerScreen> {
     );
   }
 
-  Widget _buildQuickStats() {
+  Widget _buildRecommendedNutrition() {
+    final nutrition = _latestFeedback?['feedbackContent']?['recommendations']?['nutrition'];
+    if (nutrition == null) return const SizedBox.shrink();
+
+    final protein = nutrition['protein'] ?? 0;
+    final carbs = nutrition['carbs'] ?? 0;
+    final fat = nutrition['fat'] ?? 0;
+    final calories = nutrition['calories'] ?? 0;
+
     return AppCard(
-      // AppCardHeader에 새로 만든 padding 속성을 사용합니다.
       header: const AppCardHeader(
         title: Row(children: [
-          Icon(Icons.trending_up, color: Colors.blue),
+          Icon(Icons.restaurant, color: Colors.blue),
           SizedBox(width: 8),
-          Text('Current Performance')
+          Text('AI Recommended Nutrition')
         ]),
-        // 하단 여백을 16 대신 8로 줄입니다.
         padding: EdgeInsets.fromLTRB(24, 24, 24, 0),
       ),
       content: AppCardContent(
         child: Padding(
           padding: const EdgeInsets.only(bottom: 18.0),
-          child: GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: 2.5,
+          child: Column(
             children: [
-              _buildStatItem('4', 'Workouts This Week', Colors.green),
-              _buildStatItem('1850', 'Avg Daily Calories', Colors.blue),
-              _buildStatItem('95g', 'Daily Protein', Colors.orange),
-              _buildStatItem('12%', 'Strength Increase', Colors.purple),
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 2.5,
+                children: [
+                  _buildNutritionItem('${calories}kcal', 'Calories', Colors.red),
+                  _buildNutritionItem('${protein}g', 'Protein', Colors.blue),
+                  _buildNutritionItem('${carbs}g', 'Carbs', Colors.green),
+                  _buildNutritionItem('${fat}g', 'Fat', Colors.orange),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: AppButton(
+                  onPressed: () => _applyNutritionGoal(),
+                  variant: AppButtonVariant.outline,
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.bookmark_add, size: 18),
+                      SizedBox(width: 8),
+                      Text('이 영양소를 내 목표로 설정'),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -122,11 +180,41 @@ class _AiTrainerScreenState extends State<AiTrainerScreen> {
     );
   }
 
-  Widget _buildStatItem(String value, String label, Color color) {
+  Future<void> _applyNutritionGoal() async {
+    try {
+      final feedbackId = _latestFeedback?['feedbackId'];
+      if (feedbackId == null) {
+        throw Exception('피드백 ID를 찾을 수 없습니다.');
+      }
+
+      final result = await _apiService.applyAINutrition(feedbackId);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'AI 추천 영양소가 목표로 설정되었습니다!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('목표 설정 실패: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildNutritionItem(String value, String label, Color color) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(value, style: TextStyle(fontSize: 24, color: color, fontWeight: FontWeight.bold)),
+        Text(value, style: TextStyle(fontSize: 22, color: color, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
@@ -193,62 +281,326 @@ class _AiTrainerScreenState extends State<AiTrainerScreen> {
     );
   }
 
-// lib/screens/ai_trainer_screen.dart
+  Widget _buildLatestFeedbackCard() {
+    final content = _latestFeedback?['feedbackContent'];
+    final createdAt = _latestFeedback?['createdAt'];
+    
+    if (content == null) return const SizedBox.shrink();
+    
+    final analysis = content['analysis'] ?? '분석 결과를 불러올 수 없습니다.';
+    final date = createdAt != null ? DateTime.parse(createdAt) : DateTime.now();
 
-  Widget _buildLatestFeedbackCard(FeedbackHistory feedback) {
     return AppCard(
       header: AppCardHeader(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Row(children: [Icon(Icons.message_outlined, color: Colors.green), SizedBox(width: 8), Text('Latest Analysis')]),
-            AppBadge(text: DateFormat.yMMMd().format(feedback.date), variant: AppBadgeVariant.secondary),
+            const Row(children: [
+              Icon(Icons.psychology, color: Colors.purple),
+              SizedBox(width: 8),
+              Text('Latest AI Analysis')
+            ]),
+            AppBadge(text: DateFormat.yMMMd().format(date), variant: AppBadgeVariant.secondary),
           ],
         ),
       ),
       content: AppCardContent(
-        // 1. Column 전체를 Padding 위젯으로 감싸줍니다.
         child: Padding(
-          // 2. only(bottom: ...)을 사용해 아래쪽에만 16만큼 여백을 줍니다.
           padding: const EdgeInsets.only(bottom: 20.0),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.purple.shade50,
+              borderRadius: BorderRadius.circular(8)
+            ),
+            child: Text(
+              analysis,
+              style: TextStyle(color: Colors.purple.shade800, fontSize: 14),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecommendedExercises() {
+    final exercises = _latestFeedback?['feedbackContent']?['recommendations']?['exercises'];
+    if (exercises == null || exercises is! List || exercises.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return AppCard(
+      header: const AppCardHeader(
+        title: Row(children: [
+          Icon(Icons.fitness_center, color: Colors.green),
+          SizedBox(width: 8),
+          Text('AI Recommended Exercises')
+        ]),
+      ),
+      content: AppCardContent(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
-                child: Text(feedback.analysis, style: TextStyle(color: Colors.blue.shade800)),
-              ),
-
-              // 3. 요소들 사이의 SizedBox는 원하는 만큼 유지하거나 조절할 수 있습니다.
-              const SizedBox(height: 16),
-              const Text('AI Recommendations:', style: TextStyle(fontWeight: FontWeight.bold)),
+              ...exercises.map<Widget>((exercise) {
+                final name = exercise['name'] ?? 'Unknown';
+                final type = exercise['type'] ?? 'weight';
+                final sets = exercise['sets'] ?? 0;
+                final reps = exercise['reps'];
+                final weight = exercise['weight'];
+                final duration = exercise['duration'];
+                final intensity = exercise['intensity'];
+                final reason = exercise['reason'] ?? '';
+                final isInDb = exercise['isInDatabase'] ?? false;
+                
+                String details = '';
+                if (type == 'cardio' && duration != null) {
+                  details = '${duration}분';
+                  if (intensity != null) details += ' ($intensity)';
+                } else {
+                  details = '$sets sets';
+                  if (reps != null) details += ' × $reps reps';
+                  if (weight != null) details += ' @ ${weight}kg';
+                }
+                
+                // 운동 타입에 따라 색상과 아이콘 결정
+                final Color iconColor = type == 'cardio' 
+                  ? Colors.orange 
+                  : (isInDb ? Colors.green : Colors.blue);
+                final IconData iconData = type == 'cardio' 
+                  ? Icons.directions_run 
+                  : (isInDb ? Icons.fitness_center : Icons.add_circle);
+                
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: iconColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          iconData,
+                          color: iconColor,
+                          size: 20
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    name,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                  ),
+                                ),
+                                if (type == 'cardio')
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade100,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'CARDIO',
+                                      style: TextStyle(
+                                        color: Colors.orange.shade700,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                if (!isInDb && type != 'cardio')
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade100,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'NEW',
+                                      style: TextStyle(
+                                        color: Colors.blue.shade700,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              details,
+                              style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w500),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              reason,
+                              style: const TextStyle(color: Colors.grey, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
               const SizedBox(height: 8),
-
-              ...feedback.recommendations.map((rec) => Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Icon(Icons.track_changes, color: Colors.green, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(rec)),
-                ]),
-              )),
-
-              const SizedBox(height: 16), // AI 추천과 통계 사이 간격
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildStatItem('${feedback.metrics.workoutConsistency}%', 'Consistency', Colors.blue),
-                  _buildStatItem('${feedback.metrics.nutritionScore}%', 'Nutrition', Colors.green),
-                  _buildStatItem('${feedback.metrics.progressRate}%', 'Progress', Colors.purple),
-                ],
+              SizedBox(
+                width: double.infinity,
+                child: AppButton(
+                  onPressed: () => _showApplyWorkoutDialog(),
+                  variant: AppButtonVariant.defaults,
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.calendar_month, size: 18),
+                      SizedBox(width: 8),
+                      Text('AI 추천대로 운동계획 세팅하기'),
+                    ],
+                  ),
+                ),
               ),
-              // 4. Column 맨 마지막에 있던 SizedBox는 이제 Padding이 처리하므로 필요 없습니다.
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _showApplyWorkoutDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('AI 추천 운동계획 적용'),
+        content: const Text('AI가 추천한 운동을 운동계획으로 등록하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('예'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      _showDateSelectionDialog();
+    }
+  }
+
+  Future<void> _showDateSelectionDialog() async {
+    final selectedDates = <DateTime>{};
+    DateTime focusedDay = DateTime.now();
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('운동 날짜 선택'),
+          content: SizedBox(
+            width: 400,
+            height: 450,
+            child: Column(
+              children: [
+                TableCalendar(
+                  firstDay: DateTime.now(),
+                  lastDay: DateTime.now().add(const Duration(days: 90)),
+                  focusedDay: focusedDay,
+                  selectedDayPredicate: (day) => selectedDates.contains(day),
+                  onDaySelected: (selected, focused) {
+                    setState(() {
+                      if (selectedDates.contains(selected)) {
+                        selectedDates.remove(selected);
+                      } else {
+                        selectedDates.add(selected);
+                      }
+                      focusedDay = focused;
+                    });
+                  },
+                  calendarFormat: CalendarFormat.month,
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                  ),
+                  calendarStyle: CalendarStyle(
+                    selectedDecoration: BoxDecoration(
+                      color: Colors.blue,
+                      shape: BoxShape.circle,
+                    ),
+                    todayDecoration: BoxDecoration(
+                      color: Colors.blue.shade200,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '선택된 날짜: ${selectedDates.length}개',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('취소'),
+            ),
+            ElevatedButton(
+              onPressed: selectedDates.isEmpty
+                  ? null
+                  : () {
+                      Navigator.pop(context);
+                      _applyWorkoutPlan(selectedDates.toList());
+                    },
+              child: const Text('적용'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _applyWorkoutPlan(List<DateTime> dates) async {
+    try {
+      final feedbackId = _latestFeedback?['feedbackId'];
+      if (feedbackId == null) {
+        throw Exception('피드백 ID를 찾을 수 없습니다.');
+      }
+
+      final dateStrings = dates.map((d) => DateFormat('yyyy-MM-dd').format(d)).toList();
+
+      final result = await _apiService.applyAIWorkout(feedbackId, dateStrings);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'AI 운동계획이 적용되었습니다!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('운동계획 적용 실패: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

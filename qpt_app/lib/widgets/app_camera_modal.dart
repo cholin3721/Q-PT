@@ -1,4 +1,4 @@
-// lib/widgets/app_camera_modal.dart
+// lib/widgets/app_camera_modal.dart (Translated Version)
 
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -13,7 +13,7 @@ class AppCameraModal extends StatefulWidget {
 
   const AppCameraModal({
     super.key,
-    this.title = "음식 사진 촬영",
+    this.title = "Upload Image", // "음식 사진 촬영" -> "Upload Image"
     required this.onImageSelected,
   });
 
@@ -38,7 +38,7 @@ class _AppCameraModalState extends State<AppCameraModal> {
   void _handleConfirm() {
     if (_selectedImage != null) {
       widget.onImageSelected(_selectedImage!);
-      Navigator.of(context).pop(); // 모달 닫기
+      Navigator.of(context).pop(); // Close modal
     }
   }
 
@@ -59,7 +59,7 @@ class _AppCameraModalState extends State<AppCameraModal> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 헤더
+          // Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -68,8 +68,7 @@ class _AppCameraModalState extends State<AppCameraModal> {
             ],
           ),
           const SizedBox(height: 24),
-          
-          // 이미지가 선택되었는지에 따라 다른 UI 표시
+
           if (_selectedImage == null)
             _buildSelectionUI()
           else
@@ -91,17 +90,21 @@ class _AppCameraModalState extends State<AppCameraModal> {
         child: Column(
           children: [
             const Icon(Icons.camera_alt_outlined, size: 48, color: Colors.grey),
-            const Text('음식 사진을 촬영하거나 갤러리에서 선택하세요'),
+            const SizedBox(height: 8),
+            // "음식 사진을 촬영하거나..." -> "Take a photo or select..."
+            const Text('Take a photo or select from your gallery'),
             const SizedBox(height: 16),
             AppButton(
               onPressed: () => _pickImage(ImageSource.camera),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.camera_alt), SizedBox(width: 8), Text('카메라로 촬영')]),
+              // "카메라로 촬영" -> "Take Photo"
+              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.camera_alt), SizedBox(width: 8), Text('Take Photo')]),
             ),
             const SizedBox(height: 8),
             AppButton(
               onPressed: () => _pickImage(ImageSource.gallery),
               variant: AppButtonVariant.outline,
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.photo_library), SizedBox(width: 8), Text('갤러리에서 선택')]),
+              // "갤러리에서 선택" -> "Choose from Gallery"
+              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.photo_library), SizedBox(width: 8), Text('Choose from Gallery')]),
             ),
           ],
         ),
@@ -125,11 +128,13 @@ class _AppCameraModalState extends State<AppCameraModal> {
         Row(
           children: [
             Expanded(
-              child: AppButton(onPressed: _handleRetake, variant: AppButtonVariant.outline, child: const Text('다시 선택')),
+              // "다시 선택" -> "Choose Again"
+              child: AppButton(onPressed: _handleRetake, variant: AppButtonVariant.outline, child: const Text('Choose Again')),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: AppButton(onPressed: _handleConfirm, child: const Text('사용하기')),
+              // "사용하기" -> "Confirm"
+              child: AppButton(onPressed: _handleConfirm, child: const Text('Confirm')),
             ),
           ],
         ),

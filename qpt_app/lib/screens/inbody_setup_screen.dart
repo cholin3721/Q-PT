@@ -1,4 +1,4 @@
-// lib/screens/inbody_setup_screen.dart (최종 수정본)
+// lib/screens/inbody_setup_screen.dart (6 Fields Review Version)
 
 import 'package:flutter/material.dart';
 import 'package:dotted_border/dotted_border.dart';
@@ -30,23 +30,36 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
   bool _isUploading = false;
   Map<String, dynamic>? _ocrData;
 
+  // ✅ 1. 데이터 항목 추가: BMI와 체지방률 컨트롤러 추가
   final Map<String, TextEditingController> _reviewControllers = {
     'height': TextEditingController(),
     'weight': TextEditingController(),
     'muscleMass': TextEditingController(),
     'fatMass': TextEditingController(),
+    'bmi': TextEditingController(),
+    'bodyFatPercentage': TextEditingController(),
   };
 
   void _handleImageUpload() async {
     setState(() => _isUploading = true);
     await Future.delayed(const Duration(seconds: 2));
 
-    final mockOcrData = { 'height': 175.0, 'weight': 70.5, 'muscleMass': 32.1, 'fatMass': 12.8 };
+    // ✅ 2. 데이터 처리 업데이트: Mock 데이터에 BMI와 체지방률 추가
+    final mockOcrData = {
+      'height': 175.0,
+      'weight': 70.5,
+      'muscleMass': 32.1,
+      'fatMass': 12.8,
+      'bmi': 23.0,
+      'bodyFatPercentage': 18.2,
+    };
 
     _reviewControllers['height']?.text = mockOcrData['height'].toString();
     _reviewControllers['weight']?.text = mockOcrData['weight'].toString();
     _reviewControllers['muscleMass']?.text = mockOcrData['muscleMass'].toString();
     _reviewControllers['fatMass']?.text = mockOcrData['fatMass'].toString();
+    _reviewControllers['bmi']?.text = mockOcrData['bmi'].toString();
+    _reviewControllers['bodyFatPercentage']?.text = mockOcrData['bodyFatPercentage'].toString();
 
     setState(() {
       _ocrData = mockOcrData;
@@ -64,16 +77,11 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
     _pageController.animateToPage(2, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
   }
 
-  // 시스템 뒤로가기 버튼 처리를 위한 함수
   Future<bool> _onWillPop() async {
-    // 현재 페이지가 첫 페이지가 아니라면
     if (_pageController.page?.round() != 0) {
-      // 이전 페이지로 이동
       _goToPreviousStep();
-      // 앱이 종료되는 것을 막음
       return false;
     }
-    // 첫 페이지라면 시스템 기본 동작(화면 닫기)을 따름
     return true;
   }
 
@@ -87,24 +95,30 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // WillPopScope로 Scaffold를 감싸서 시스템 뒤로가기 제어
-    return WillPopScope(
-      onWillPop: _onWillPop,
-      child: Scaffold(
-        body: PageView(
-          controller: _pageController,
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            _buildUploadStep(),
-            _buildReviewStep(),
-            _buildGoalsStep(),
-          ],
-        ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('InBody Setup'),
+        backgroundColor: Colors.grey.shade100,
+        elevation: 0,
+        leading: _pageController.positions.isNotEmpty && _pageController.page?.round() != 0
+            ? IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _goToPreviousStep,
+        )
+            : null,
+      ),
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          _buildUploadStep(),
+          _buildReviewStep(),
+          _buildGoalsStep(),
+        ],
       ),
     );
   }
 
-  // 각 단계를 감싸는 공통 레이아웃 위젯
   Widget _buildStepWrapper({required Widget child}) {
     return Container(
       color: Colors.grey.shade100,
@@ -130,14 +144,22 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
   }
 
   Widget _buildUploadStep() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 48),
+    return _buildStepWrapper(
       child: AppCard(
-        header: const AppCardHeader(
-          title: Center(child: Text('InBody Setup')),
-          description: Center(
+        header: AppCardHeader(
+          title: const Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.track_changes, color: AppColors.primary),
+                SizedBox(width: 8),
+                Text('InBody Setup'),
+              ],
+            ),
+          ),
+          description: const Center(
               child: Text(
-                'Upload your InBody result sheet to get started.',
+                'Upload your InBody result sheet to get started',
                 textAlign: TextAlign.center,
               )),
         ),
@@ -156,32 +178,43 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
                   strokeWidth: 1,
                   dashPattern: const [6, 6],
                 ),
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.cloud_upload_outlined,
-                            size: 48, color: Colors.grey),
-                        const SizedBox(height: 8),
-                        const Text(
-                            'Take a photo or upload your sheet'),
-                        const SizedBox(height: 16),
-                        AppButton(
-                            onPressed: _handleImageUpload,
-                            child: const Text('Upload Photo')),
-                      ],
-                    ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.upload_file, size: 48, color: Colors.grey),
+                      const SizedBox(height: 8),
+                      const Text('Take a photo or upload your sheet'),
+                      const SizedBox(height: 16),
+                      AppButton(
+                        onPressed: _handleImageUpload,
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.camera_alt_outlined, size: 16),
+                            SizedBox(width: 8),
+                            Text('Upload Photo'),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
               SizedBox(
-                width: 200, // 예시 너비
+                width: 200,
                 child: AppButton(
                   onPressed: _handleImageUpload,
                   variant: AppButtonVariant.outline,
-                  child: const Text('Enter Manually'),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.edit_outlined, size: 16),
+                      SizedBox(width: 8),
+                      Text('Enter Manually'),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -195,14 +228,11 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
     return _buildStepWrapper(
       child: AppCard(
         header: AppCardHeader(
-          title: Row(children: [
-            AppButton(onPressed: _goToPreviousStep, variant: AppButtonVariant.ghost, size: AppButtonSize.icon, child: const Icon(Icons.arrow_back)),
-            const SizedBox(width: 8),
-            const Expanded(child: Text('Review Your Data')),
-          ]),
-          description: const Padding(padding: EdgeInsets.only(left: 48.0), child: Text('Please verify the extracted information.')),
+          title: const Text('Review Your Data'),
+          description: const Text('Please verify the extracted information.'),
         ),
         content: AppCardContent(
+          // ✅ 3. UI 레이아웃 변경: 6개 필드를 표시하도록 수정
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -217,8 +247,15 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
                 const SizedBox(width: 16),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const AppLabel('Fat (kg)'), AppInput(controller: _reviewControllers['fatMass'])])),
               ]),
+              const SizedBox(height: 16),
+              Row(children: [
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const AppLabel('BMI'), AppInput(controller: _reviewControllers['bmi'])])),
+                const SizedBox(width: 16),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const AppLabel('Body Fat %'), AppInput(controller: _reviewControllers['bodyFatPercentage'])])),
+              ]),
               const SizedBox(height: 24),
               AppButton(onPressed: _handleProceedToGoals, child: const Text('Continue to Goals')),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -230,12 +267,12 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
     return _buildStepWrapper(
       child: AppCard(
         header: AppCardHeader(
-          title: Row(children: [
-            AppButton(onPressed: _goToPreviousStep, variant: AppButtonVariant.ghost, size: AppButtonSize.icon, child: const Icon(Icons.arrow_back)),
-            const SizedBox(width: 8),
-            const Expanded(child: Text('Set Your Goals')),
+          title: const Row(children: [
+            Icon(Icons.track_changes, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Set Your Goals'),
           ]),
-          description: const Padding(padding: EdgeInsets.only(left: 48.0), child: Text('We\'ve suggested some goals based on your data.')),
+          description: const Text('We\'ve suggested some goals based on your data.'),
         ),
         content: AppCardContent(
           child: Column(
@@ -247,7 +284,18 @@ class _InBodySetupScreenState extends State<InBodySetupScreen> {
               const AppLabel('Additional Goals'),
               const AppTextarea(hintText: 'e.g., Improve endurance...', minLines: 2),
               const SizedBox(height: 24),
-              AppButton(onPressed: widget.onComplete, child: const Text('Complete Setup')),
+              AppButton(
+                onPressed: widget.onComplete,
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check_circle_outline, size: 16),
+                    SizedBox(width: 8),
+                    Text('Complete Setup'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),

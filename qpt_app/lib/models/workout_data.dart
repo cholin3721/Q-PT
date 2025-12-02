@@ -1,22 +1,22 @@
 // lib/models/workout_data.dart
 
-enum SetStatus { pending, completed }
+enum SetStatus { pending, completed, skipped }
 
 class WorkoutSet {
   final int id;
-  final int targetWeight;
-  final int targetReps;
+  final double? targetWeight;
+  final int? targetReps;
   
   // 1. final 키워드를 제거해서 값을 변경할 수 있도록 합니다.
-  int? actualWeight;
+  double? actualWeight;
   int? actualReps;
   SetStatus status;
 
   // 2. 생성자는 그대로 둡니다.
   WorkoutSet({
     required this.id,
-    required this.targetWeight,
-    required this.targetReps,
+    this.targetWeight,
+    this.targetReps,
     this.actualWeight,
     this.actualReps,
     this.status = SetStatus.pending,
@@ -36,7 +36,7 @@ class WorkoutPlan {
   final int id;
   final String name;
   final String status;
-  final int totalSets;
+  int totalSets; // final 제거
   int completedSets;
   final List<Exercise> exercises;
 

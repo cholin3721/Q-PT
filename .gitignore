@@ -1,0 +1,48 @@
+# Google Vision API Key
+q-pt-479300-26c3c7255839.json
+*-*.json
+
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+.env.local
+
+# Build outputs
+build/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Flutter
+qpt_app/.dart_tool/
+qpt_app/.flutter-plugins
+qpt_app/.flutter-plugins-dependencies
+qpt_app/.packages
+qpt_app/.pub-cache/
+qpt_app/.pub/
+qpt_app/build/
+
+# Test images (optional - remove if you want to track them)
+*.jpg
+*.jpeg
+*.png
+!qpt_app/android/app/src/main/res/mipmap-*/ic_launcher.png
+!qpt_app/ios/Runner/Assets.xcassets/**/*.png
+
+
+

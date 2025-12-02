@@ -13,7 +13,6 @@ class WelcomeScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. 배경 그라데이션
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -23,7 +22,6 @@ class WelcomeScreen extends StatelessWidget {
               ),
             ),
           ),
-          // 2. 메인 콘텐츠
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
@@ -50,7 +48,7 @@ class WelcomeScreen extends StatelessWidget {
     return Column(
       children: [
         Transform.rotate(
-          angle: -0.2, // 12도 정도 회전
+          angle: 0.2, // React 코드의 rotate-12와 유사하게 조정
           child: Container(
             width: 80,
             height: 80,
@@ -86,21 +84,22 @@ class WelcomeScreen extends StatelessWidget {
         _buildFeatureCard(Icons.bar_chart, Colors.orange, 'Smart Diet Tracking', 'AI-powered food analysis from photos'),
         const SizedBox(height: 16),
         _buildFeatureCard(Icons.fitness_center, Colors.green, 'Workout Planner', 'Personalized exercise routines'),
+        const SizedBox(height: 16),
+        // ✅ 4번째 'AI Personal Trainer' 카드를 추가했습니다.
+        _buildFeatureCard(Icons.psychology, Colors.purple, 'AI Personal Trainer', 'Intelligent feedback and recommendations'),
       ],
     );
   }
 
   Widget _buildFeatureCard(IconData icon, Color color, String title, String subtitle) {
-    // ClipRRect로 감싸서 블러 효과가 카드를 벗어나지 않도록 함
     return ClipRRect(
       borderRadius: BorderRadius.circular(12.0),
       child: BackdropFilter(
-        // 블러 효과
         filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.6), // 반투명 배경
+            color: Colors.white.withOpacity(0.6),
             borderRadius: BorderRadius.circular(12.0),
             border: Border.all(color: Colors.white.withOpacity(0.2)),
           ),
@@ -132,29 +131,27 @@ class WelcomeScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 커스텀 그라데이션 버튼
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12.0),
-          child: Stack(
-            children: [
-              Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue, Colors.green],
-                  ),
-                ),
-                child: const SizedBox(height: 56), // 버튼 높이
+        // ✅ 버튼 스타일을 개선하여 텍스트가 잘 보이도록 수정했습니다.
+        ElevatedButton(
+          onPressed: onGetStarted,
+          style: ElevatedButton.styleFrom(
+            padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+            elevation: 5,
+          ),
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Colors.blue, Colors.green]),
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+            child: Container(
+              height: 56,
+              alignment: Alignment.center,
+              child: const Text(
+                'Get Started',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
               ),
-              TextButton(
-                onPressed: onGetStarted,
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.green,
-                  fixedSize: const Size.fromHeight(56),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                child: const Center(child: Text('Get Started')),
-              ),
-            ],
+            ),
           ),
         ),
         const SizedBox(height: 8),

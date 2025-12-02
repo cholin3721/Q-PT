@@ -1,25 +1,13 @@
-const mysql = require('mysql2');
+// 서버 진입점: app.js를 불러와 실행
+require('dotenv').config();
+const app = require('./src/app');
+const port = process.env.PORT || 3000;
 
-// 2. 접속할 데이터베이스 정보를 설정합니다.
-const connection = mysql.createConnection({
-  host: 'localhost',      // DB 호스트
-  user: 'root',           // DB 사용자 이름
-  password: 'worldcup7!', // DB 비밀번호
-  database: 'q_pt' // 접속할 데이터베이스 이름
+app.listen(port, () => {
+  console.log(`Q-PT API 서버가 http://localhost:${port} 에서 실행 중입니다.`);
+  console.log('환경 변수 확인:');
+  console.log(`- DB_HOST: ${process.env.DB_HOST || 'localhost'}`);
+  console.log(`- DB_NAME: ${process.env.DB_NAME || 'q_pt'}`);
+  console.log(`- JWT_SECRET: ${process.env.JWT_SECRET ? '✅ 설정됨' : '⚠️  기본값 사용'}`);
+  console.log(`- OPENAI_API_KEY: ${process.env.OPENAI_API_KEY ? '✅ 설정됨 (AI 기능 활성화)' : '⚠️  미설정 (Mock 데이터 사용)'}`);
 });
-
-// 3. 데이터베이스 연결을 시도합니다.
-connection.connect(error => {
-  // 연결 시 에러가 발생했다면
-  if (error) {
-    console.error('❌ 데이터베이스 연결에 실패했습니다:', error.stack);
-    return;
-  }
-
-  // 연결에 성공했다면
-  console.log('✅ MySQL 데이터베이스에 성공적으로 연결되었습니다.');
-  console.log('연결 ID:', connection.threadId);
-});
-
-// 4. 확인 후 연결을 종료합니다.
-connection.end();

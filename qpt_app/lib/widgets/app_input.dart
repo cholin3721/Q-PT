@@ -1,6 +1,7 @@
 // lib/widgets/app_input.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/colors.dart';
 
 class AppInput extends StatelessWidget {
@@ -8,7 +9,8 @@ class AppInput extends StatelessWidget {
   final String? initialValue;
   final String? hintText;
   final bool obscureText;
-  final TextInputType? keyboardType; // <-- 1. keyboardType 파라미터 추가
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
   final String? Function(String?)? validator;
   final void Function(String?)? onSaved;
 
@@ -18,7 +20,8 @@ class AppInput extends StatelessWidget {
     this.initialValue,
     this.hintText,
     this.obscureText = false,
-    this.keyboardType, // <-- 2. 생성자에 추가
+    this.keyboardType,
+    this.inputFormatters,
     this.validator,
     this.onSaved,
   }) : assert(initialValue == null || controller == null,
@@ -30,7 +33,8 @@ class AppInput extends StatelessWidget {
       controller: controller,
       initialValue: initialValue,
       obscureText: obscureText,
-      keyboardType: keyboardType, // <-- 3. TextFormField에 연결
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       validator: validator,
       onSaved: onSaved,
       decoration: InputDecoration(
