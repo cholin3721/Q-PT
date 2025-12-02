@@ -10,7 +10,7 @@ import 'inbody_setup_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Map<String, dynamic> user;
-  final VoidCallback onLogout;
+  final Future<void> Function() onLogout;
   final VoidCallback onInBodyComplete;
 
   const ProfileScreen({
@@ -363,7 +363,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AppButton(onPressed: () {}, variant: AppButtonVariant.ghost, child: const Row(children: [Icon(Icons.settings_outlined), SizedBox(width: 8), Text('Settings & Preferences')])),
-            AppButton(onPressed: widget.onLogout, variant: AppButtonVariant.ghost, child: const Row(children: [Icon(Icons.logout, color: Colors.red), SizedBox(width: 8), Text('Sign Out', style: TextStyle(color: Colors.red))])),
+            AppButton(onPressed: () async {
+              await widget.onLogout();
+            }, variant: AppButtonVariant.ghost, child: const Row(children: [Icon(Icons.logout, color: Colors.red), SizedBox(width: 8), Text('Sign Out', style: TextStyle(color: Colors.red))])),
           ],
         ),
       ),

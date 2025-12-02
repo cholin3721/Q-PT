@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/welcome_screen.dart';
 import 'screens/auth_screen.dart';
@@ -12,6 +13,7 @@ import 'screens/workout_planner_screen.dart';
 import 'screens/ai_trainer_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/history_screen.dart';
+import 'services/api_service.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -30,19 +32,37 @@ class MyApp extends StatefulWidget {
 enum AppState { welcome, authentication, authenticated }
 
 class _MyAppState extends State<MyApp> {
-  AppState _appState = AppState.authenticated; // 바로 인증된 상태로 시작
+  AppState _appState = AppState.welcome; // 웰컴 화면부터 시작
   Map<String, dynamic>? _user;
 
   @override
   void initState() {
     super.initState();
-    // 테스트용 사용자 데이터로 바로 설정
-    _user = {
-      'id': 1,
-      'nickname': '김철중',
-      'email': 'cholin3721@example.com',
-      'provider': 'google',
-    };
+    _checkAuthStatus();
+  }
+
+  // 저장된 토큰 확인하여 자동 로그인
+  Future<void> _checkAuthStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
+    
+    if (token != null) {
+      // 토큰이 있으면 사용자 정보 조회
+      try {
+        final apiService = ApiService();
+        final userData = await apiService.getMyInfo();
+        setState(() {
+          _user = userData;
+          _appState = AppState.authenticated;
+        });
+      } catch (e) {
+        // 토큰이 유효하지 않으면 삭제
+        await prefs.remove('jwt_token');
+        setState(() {
+          _appState = AppState.welcome;
+        });
+      }
+    }
   }
 
   void _handleGetStarted() => setState(() => _appState = AppState.authentication);
@@ -52,10 +72,16 @@ class _MyAppState extends State<MyApp> {
       _appState = AppState.authenticated;
     });
   }
-  void _handleLogout() => setState(() {
-    _user = null;
-    _appState = AppState.welcome;
-  });
+  Future<void> _handleLogout() async {
+    // 저장된 토큰 삭제
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('jwt_token');
+    
+    setState(() {
+      _user = null;
+      _appState = AppState.welcome;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +107,7 @@ class _MyAppState extends State<MyApp> {
 
 class MainAppShell extends StatefulWidget {
   final Map<String, dynamic> user;
-  final VoidCallback onLogout;
+  final Future<void> Function() onLogout;
 
   const MainAppShell({
     super.key,

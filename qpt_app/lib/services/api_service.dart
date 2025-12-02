@@ -49,8 +49,8 @@ class ApiService {
 
   // 토큰 조회
   Future<String?> _getStoredToken() async {
-    // 테스트용 고정 토큰 반환
-    return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImlhdCI6MTczNzU0NzI1N30.test';
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('jwt_token');
   }
 
   // 토큰 삭제
